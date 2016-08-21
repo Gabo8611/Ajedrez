@@ -1,0 +1,589 @@
+<html>
+	<head>
+		<meta charset="utf8">
+		<title>Ajedrez</title>
+		<style>
+			@font-face {
+			    font-family: alpha;
+			    src: url(ChessAlpha2.ttf);
+			}
+			#c-blancas,#c-negras,.casilla{
+				font-family: alpha;				
+			}
+			.casilla{
+				width:20px;
+				height:20px;
+				padding:5px;
+				display: inline-block;
+				font-size: 20px;
+				vertical-align: middle;
+				text-align: center;
+				cursor:pointer;
+			}
+			i{
+				font-style: normal;
+			}
+			.casilla:hover{
+				background: #aaa;
+			}
+			.claro{
+				background: #ccc;
+			}
+			.oscuro{
+				background: #888;
+			}
+			.active{
+				outline: 1px solid blue;
+				z-index: 100;
+				position:relative;
+			}
+			.posible{
+				outline: 1px solid red;
+				z-index: 100;
+				position:relative;
+			}
+			
+		</style>
+
+	</head>
+	<body>
+		<script>
+			var t='';
+			var l='abcdefgh';
+			var fb = '````````'// filas en blanco 
+			var pp = 0; //contador de peones
+			var pt = 0; //contador de torres
+			var pa = 0; //contador de alfil
+			var pc = 0; //contador de caballo
+			var pr = 0; //contador de reina
+			var pk = 0; //contador de reyes
+			var fig='ljkmnkjliiiiiiii'+fb+fb+fb+fb+'IIIIIIIILJKMNKJL';
+			var mov=[] // lista de movimientos 
+			var pzs=[] //Arreglo de piezas
+
+			t+=" <div id='c-blancas'>&nbsp;" //Contenedor para las piezas capturadas blancas
+			t+=" </div>"
+			for (var i=8; i>0; i--){
+				var idp = ''; //id de la pieza 
+				t+="<div>"
+				for(var j=0; j<8; j++){
+
+					switch(fig[(j)+((i-1)*8)]){
+						case "l": pt++;	idp = "bt"+pt; break;
+						case "j": pa++; idp = "ba"+pa; break;
+						case "k": pc++; idp = "bc"+pc; break;
+						case "n": pr++; idp = "br"+pr; break;
+						case "m": pk++; idp = "bk"+pk; break;
+						case "i": pp++; idp = "bp"+pp; break;
+						case "L": pt++; idp = "nt"+pt; break;
+						case "J": pa++; idp = "na"+pa; break;
+						case "K": pc++; idp = "nc"+pc; break;
+						case "N": pr++; idp = "nr"+pr; break;
+						case "M": pk++; idp = "nk"+pk; break;
+						case "I": pp++; idp = "np"+pp; break;
+					}
+
+					var clase = (j%2==0 && i%2==0)||(j%2!=0 && i%2!=0)?"claro":"oscuro";
+					pz = fig[(j)+((i-1)*8)] != "`" ? "<i id='"+idp+"'>"+fig[(j)+((i-1)*8)]+"</i>" : "";
+					t+="<div id='"+l[j]+i+"' class='casilla "+clase+"'>"+pz+"</div>"
+					if (idp!='') pzs.push(idp);
+				}
+				t+="</div>"
+			}
+			t+=" <div id='c-negras'>&nbsp;" //Contenedor para las piezas capturadas negras
+			t+=" </div>"
+			document.write(t);
+			
+			var x = document.getElementsByClassName("casilla");
+			var activo = false;
+			turno = 'b'
+
+			var fgId = function(id){ return document.getElementById(id); }
+			var desactiva = function(){
+				for (i = 0; i < x.length; i++) {
+					if (x[i].classList.contains("active")){
+						x[i].classList.remove("active");
+					};
+					if (x[i].classList.contains("posible")){
+						x[i].classList.remove("posible");
+					};
+				}
+			}
+			//Comprueba el status de la pieza en la casilla
+			var pzCasilla = function(idCasilla){
+
+				var casilla = fgId(idCasilla);
+				if (casilla.innerHTML==''){
+					return 1 // No existe una pieza
+				}else if (casilla.childNodes[0].id[0]!=turno){
+					return 2 //Es una pieza contraria
+				}else if (casilla.childNodes[0].id[0]==turno){
+					return 3 //Es una pieza aliada
+				}
+			}
+			//Comprueba si existe una cadena en el array
+			var subIndexOf = function (array,string){
+				var aux;
+				for (i = 0; i < array.length; i++) {
+					aux = array[i].split("-");	
+					if (aux[0]==string) return true;
+					aux = undefined;
+				}
+				return false;
+			}
+
+			var addArrPos = function(arr,jaques){ 
+				for (i = 0; i < arr.length; i++) {
+					//Si al mover la pieza no se encuentra el rey en jaque permite el movimiento
+					if( jaques['c'].indexOf(arr[i])<0 ) fgId(arr[i]).classList.add("posible");
+				}
+			}
+			
+			var mp = function(pieza){ // movimientos para peon
+				var op = fgId(pieza);//Objeto de la pieza
+				var opp = op.parentElement; // Objeto padre
+				var f = opp.id[1] // fila
+				var c = opp.id[0] //columna
+				var ic = l.indexOf(c); //indexColumna
+				var fs=[]; //fila superior
+				var fi=[]; //fila superior
+				var o=[] //objetos
+				var movCas = []; //array de movimientos
+				fs[0] = c+(+f+1); 
+				fs[1] = c+(+f+2);
+				fi[0] = c+(+f-1); //fila inferior
+				fi[1] = c+(+f-2);
+
+				//Regresa si la pieza ya fué comida
+				if(f=="-") return movCas;
+
+				//blancas
+				if(pieza[0]=='b' && turno == 'b' ){
+
+					if(f == 2 ){
+						o[0] = fgId(fs[0]);
+						o[1] = fgId(fs[1]);
+						if ( pzCasilla(fs[0])<2 ) {movCas.push(o[0].id); }
+						if ( pzCasilla(fs[1])<2 && pzCasilla(fs[0])<2 ) {movCas.push(o[1].id); };
+					}else if(f < 8){
+						o[0] = fgId(fs[0]);
+						if ( pzCasilla(fs[0])<2 ){ movCas.push(o[0].id); };
+					}
+
+					var comIzq = l[ic-1]+(+f+1);
+					var comDer = l[ic+1]+(+f+1);
+//console.log(opp)
+					if (ic>0 && pzCasilla(comIzq)==2 ){						
+						o.push( fgId(comIzq) );
+						movCas.push(o[o.length-1].id);
+					}
+					if (ic<7 && pzCasilla(comDer)==2 ){	
+						o.push( fgId(comDer) );					
+						movCas.push(o[o.length-1].id);
+					}
+				}else if(pieza[0]=='n' && turno == 'n'){
+
+					if(f == 7 ){
+						o[0] = fgId(fi[0]);
+						o[1] = fgId(fi[1])
+						if ( pzCasilla(fi[0])<2 ){ movCas.push(o[0].id); }
+						if ( pzCasilla(fi[1])<2 && pzCasilla(fi[0])<2 ) { movCas.push(o[1].id); };
+					}else if (f > 1){
+						o[0] = fgId(fi[0]);
+						if ( pzCasilla(fi[0])<2 ){ movCas.push(o[0].id); }
+					}
+
+					var comIzq = l[ic-1]+(+f-1);
+					var comDer = l[ic+1]+(+f-1);
+
+					if (ic>0 &&  pzCasilla(comIzq)==2 ){						
+						o.push( fgId(comIzq) );
+						movCas.push(o[o.length-1].id);
+					}
+					if (ic<7 && pzCasilla(comDer)==2 ){	
+						o.push( fgId(comDer) );					
+						movCas.push(o[o.length-1].id);
+					}
+				}
+//if (pieza.substr(0,2)=='na') console.log(movCas);
+				return movCas;
+			}
+			var mt = function(pieza){
+				var op = fgId(pieza);//Objeto de la pieza
+				var opp = op.parentElement; // Objeto padre
+				var f = opp.id[1] // fila
+				var c = opp.id[0] //columna
+				var ic = l.indexOf(c); //indexColumna
+				var x = 0;
+				var y = 0;
+				var o=[]; //objetos
+				var movCas = []; //array de movimientos
+
+				//Regresa si la pieza ya fué comida
+				if(f=="-") return movCas;
+
+				for(var i = 0; i<4;i++){
+					if(i==0){y=1;x=0; limit = ( +f+y < 9 )}
+					if(i==1){y=-1;x=0; limit = ( +f+y > 0 )}
+					if(i==2){y=0;x=1; limit = ( +ic+x < 8 )}
+					if(i==3){y=0;x=-1; limit = ( +ic+x >= 0 )}
+
+					while( limit && pzCasilla( l[(+ic+x)]+(+f+y) )<3 ){
+						o.push( fgId( l[(+ic+x)]+(+f+y) ) );					
+						movCas.push(o[o.length-1].id);
+						if ( pzCasilla( l[(+ic+x)]+(+f+y) )==2) break;
+						if (i==0) { y++; limit = ( +f+y < 9 ) };
+						if (i==1) { y--; limit = ( +f+y > 0 ) };
+						if (i==2) { x++; limit = ( +ic+x < 8 ) };
+						if (i==3) { x--; limit = ( +ic+x >= 0 ) };		
+					}
+
+				}	
+				
+				return movCas;
+			}
+			var ma = function(pieza){
+				var op = fgId(pieza);//Objeto de la pieza
+				var opp = op.parentElement; // Objeto padre
+				var f = opp.id[1] // fila
+				var c = opp.id[0] //columna
+				var ic = l.indexOf(c); //indexColumna
+				var x = 0;
+				var y = 0;
+				var o=[]; //objetos
+				var movCas = []; //array de movimientos
+
+				//Regresa si la pieza ya fué comida
+				if(f=="-") return movCas;
+
+				//Buscar superior
+				for(var i = 0; i<4;i++){
+					if(i==0){ x=1;  y=1;   limit = ( (+ic+x <  8) && (+f+y < 9) )}
+					if(i==1){ x=1;  y=-1;  limit = ( (+ic+x <  8) && (+f+y > 0) )}
+					if(i==2){ x=-1; y=1;   limit = ( (+ic+x >= 0) && (+f+y < 9) )}
+					if(i==3){ x=-1; y=-1;  limit = ( (+ic+x >= 0) && (+f+y > 0) )}
+
+					while( limit && pzCasilla( l[(+ic+x)]+(+f+y) )<3 ){
+						o.push( fgId( l[(+ic+x)]+(+f+y) ) );					
+						movCas.push(o[o.length-1].id);
+						if ( pzCasilla( l[(+ic+x)]+(+f+y) )==2) break;
+						if (i==0) { x++; y++; limit = ( (+ic+x <  8) && (+f+y < 9) )};
+						if (i==1) { x++; y--; limit = ( (+ic+x <  8) && (+f+y > 0) )};
+						if (i==2) { x--; y++; limit = ( (+ic+x >= 0) && (+f+y < 9) )};
+						if (i==3) { x--; y--; limit = ( (+ic+x >= 0) && (+f+y > 0) )};		
+					}
+
+				}	
+				
+				return movCas;
+			}
+			var mc = function(pieza){
+				var op = fgId(pieza);//Objeto de la pieza
+				var opp = op.parentElement; // Objeto padre
+				var f = opp.id[1] // fila
+				var c = opp.id[0] //columna
+				var ic = l.indexOf(c); //indexColumna
+				var x = 0;
+				var y = 0;
+				var o=[]; //objetos
+				var movCas = []; //array de movimientos
+
+				//Regresa si la pieza ya fué comida
+				if(f=="-") return movCas;
+
+				//Buscar superior
+				for(var i = 0; i<8;i++){
+					if(i==0){ x=1;  y=2;   	limit = ( (+ic+x <  8) && (+f+y < 9) )}
+					if(i==1){ x=2;  y=1;  	limit = ( (+ic+x <  8) && (+f+y < 9) )}
+					if(i==2){ x=-1; y=-2;   limit = ( (+ic+x >= 0) && (+f+y > 0) )}
+					if(i==3){ x=-2; y=-1;  	limit = ( (+ic+x >= 0) && (+f+y > 0) )}
+					if(i==4){ x=1;  y=-2;   limit = ( (+ic+x <  8) && (+f+y > 0) )}
+					if(i==5){ x=2;  y=-1;  	limit = ( (+ic+x <  8) && (+f+y > 0) )}
+					if(i==6){ x=-1; y=2;   	limit = ( (+ic+x >= 0) && (+f+y < 9) )}
+					if(i==7){ x=-2; y=1;  	limit = ( (+ic+x >= 0) && (+f+y < 9) )}
+
+					if( limit && pzCasilla( l[(+ic+x)]+(+f+y) )<3 ){
+						o.push( fgId( l[(+ic+x)]+(+f+y) ) );					
+						movCas.push(o[o.length-1].id);
+					}
+				}
+				
+				return movCas;
+			}
+			var mk = function(pieza){
+				var op = fgId(pieza);//Objeto de la pieza
+				var opp = op.parentElement; // Objeto padre
+				var f = opp.id[1] // fila
+				var c = opp.id[0] //columna
+				var ic = l.indexOf(c); //indexColumna
+				var x = 0;
+				var y = 0;
+				var o=[]; //objetos
+				var libre = false;
+				var movCas = []; //array de movimientos
+//console.log(pieza);
+				
+				//Regresa si la pieza ya fué comida
+				if(f=="-") return movCas;
+
+				for(var i = 0; i<8;i++){
+					if(i==0){ x=0;  y=1;   	limit = ( 				  (+f+y < 9) ) 	}
+					if(i==1){ x=1;  y=1;  	limit = ( (+ic+x <  8) && (+f+y < 9) )	}
+					if(i==2){ x=1;  y=0;    limit = ( (+ic+x <  8) 				 )	}
+					if(i==3){ x=1;  y=-1;  	limit = ( (+ic+x <  8) && (+f+y > 0) )	}
+					if(i==4){ x=0;  y=-1;   limit = ( 				  (+f+y > 0) )	}
+					if(i==5){ x=-1; y=-1;  	limit = ( (+ic+x >= 0) && (+f+y > 0) )	}
+					if(i==6){ x=-1; y=0;   	limit = ( (+ic+x >= 0) 				 )	}
+					if(i==7){ x=-1; y=1;  	limit = ( (+ic+x >= 0) && (+f+y < 9) )	}
+
+					if( limit && pzCasilla( l[(+ic+x)]+(+f+y) )<3 ){
+						o.push( fgId( l[(+ic+x)]+(+f+y) ) );					
+						movCas.push(o[o.length-1].id);
+					}
+				}
+				
+				return movCas;				
+			}
+			var mke = function(pieza){ //Movimiento del rey en enroque
+				var op = fgId(pieza);//Objeto de la pieza
+				var opp = op.parentElement; // Objeto padre
+				var f = opp.id[1] // fila
+				var o=[]; //objetos
+				var libre = true;
+				var movCas = []; //array de movimientos
+
+				//Regresa si la pieza ya fué comida
+				if(f=="-") return movCas;
+
+				// subIndexOf comprueba que la pieza no se ha movido
+				if( f==1 || f==8 && !subIndexOf(mov,pieza) ){
+					var t = [] // contenedor de torres
+					t[0] = fgId("a"+f);
+					t[1] = fgId("h"+f)
+					//Estos bucles compueban que no haya pieza en medio
+					//Torre izquierda
+					for(var i = 2; i>0;i--){
+						if( pzCasilla( l[i]+f )>1 ){
+							libre = false;
+						}
+					}
+					//Comprueba que este libre, que la pieza que esta en la esquina sea
+					// del mismo color y que no haya sido movida
+					if(libre && pzCasilla(t[0].id)==3 && !subIndexOf(mov,t[0].childNodes[0].id) ){
+						o.push(fgId("b" + f));					
+						movCas.push(o[o.length-1].id);	
+					}
+					libre = true
+					//Torre derecha	
+					for(var i = 4; i<8;i++){
+						if( pzCasilla( l[i]+f )>1 ){
+							libre = false
+						}
+					}
+					//Comprueba que este libre, que la pieza que esta en la esquina sea
+					// del mismo color y que no haya sido movida
+					if(libre && pzCasilla(t[1].id)==3 && !subIndexOf(mov,t[1].childNodes[0].id) ){
+						o.push(fgId("g" + f));					
+						movCas.push(o[o.length-1].id);	
+					}			
+				}
+//console.log(movCas);
+				return movCas;
+			}
+			var comEn = function(pieza){ // Comprueba si se hizo enroque
+				var ultMov = mov[mov.length-1];
+				var aux = ultMov.split("-");
+				var t;
+				if (aux[0][1] == "k" && aux[1][1] == aux[2][1] && aux[1][0] == 'd' ){
+					switch(aux[2][0]){
+						case 'b': 
+							fgId("a"+aux[2][1]).classList.add("active");
+							movePz("c"+aux[2][1]);
+							break;
+						case 'g': 
+							fgId("h"+aux[2][1]).classList.add("active");
+							movePz("f"+aux[2][1]);
+
+						default:
+							return false
+					}
+				}else{
+					return false;
+				}
+			}
+			var jM = function(){ //funcion para identificar el jaque mate
+				var rey; // Id del rey
+				var cR; // Casilla del Rey
+				var arrE ={} // arreglo de movimientos encontrados
+				arrE['p'] = [];
+				arrE['c'] = [];
+				//Buscar al rey
+				for(var i = 0; i<pzs.length;i++){
+					if(pzs[i][0]==turno){
+						fgId(pzs[i]).parentElement.classList.add("active");
+						var posibles = opMove(pzs[i]) // Busca los posibles movimientos
+						var jaq = jaqDes(posibles,pzs[i]) // busca los posibles jaues en esa pieza 
+						desactiva();
+//if ( pzs[i] == 'bk2'){ console.log(posibles);console.log(pzs[i]);}
+//console.log(pzs[i])
+//console.log(jaq)
+			    		//addArrPos(posibles,jaq); //Indica los movimientos pero omite los que representen un jaque
+					}
+				}
+//if ( pieza == 'ba3'){ console.log(fgId(array[i]).innerHTML);}
+
+			}			
+			var jaqDes = function(array,pieza){ //Buscar Jaque a la descubierta de las posibilidades de movimiento(array) de una pieza
+				var op = fgId(pieza);//Objeto de la pieza
+				var opp = op.parentElement; // Objeto padre
+				var rey; // Id del rey
+				var cR; // Casilla del Rey
+				var mC // Movimientos del contrario
+				var arrE ={} // arreglo de movimientos encontrados
+				arrE['p'] = [];
+				arrE['c'] = [];
+				for(var i = 0; i<pzs.length;i++){
+					if(pzs[i][1] == "k" && pzs[i][0]==pieza[0]){
+						rey = fgId(pzs[i]).id;
+						cR = fgId(pzs[i]).parentElement.id;
+					}
+				}
+				//Si la figura es diferente al rey
+				//if(pieza[1]!="k"){
+					// Por cada movimiento posible, simula que el rey no esté en jaque
+					for(var i = 0; i<array.length;i++){
+						if(pieza[1]=="k") cR = array[i]; // Si es el rey quien se mueve colocar posision en la variable cR
+
+						//Simula el movimiento de la pieza
+
+						movePz(array[i]);
+						turno = (turno == 'b') ? 'n':'b';
+				
+						//Busca cada una de las piezas contrarias
+						for(var j = 0; j<pzs.length;j++){
+							if(pzs[j][0]!=pieza[0]){ // Compara el primer caracter para conocer si es blanca o negra
+								// Comprueba todos los movimientos de la pieza contraria
+								switch(pzs[j][1]){
+									case 'p': mC = mp(pzs[j]); break;
+									case 't': mC = mt(pzs[j]); break;
+									case 'a': mC = ma(pzs[j]); break;
+									case 'c': mC = mc(pzs[j]); break;
+									case 'r': mC = mt(pzs[j]); mC = mC.concat(ma(pzs[j]));	break;
+									case 'k': mC = mk(pzs[j]); mC = mC.concat(mke(pzs[j])); break;
+									default: break;
+								}
+								if (mC.indexOf(cR)>-1){
+									arrE['p'].push(pzs[j]); //arreglo de piezas
+									arrE['c'].push(array[i]); //Arreglo de casillas
+										//mC.push(pzs[i]) //Añade al arreglo las piezas que amenazan al rey
+								}
+
+							}
+						}
+//if (fgId('ba3').innerHTML=='')console.log("comida")
+//if ( pieza == 'ba3'){ console.log(fgId(array[i]).innerHTML);}
+						desH();
+//if ( pieza == 'ba3'){ console.log(fgId(array[i]).innerHTML); console.log(fgId('b1').innerHTML);}
+//if ( pieza == 'ba3'){ console.log(array);console.log(array[i]);console.log(turno); console.log(mov); }
+						opp.classList.add("active");
+					}
+				//}
+//console.log(arrE)
+				return arrE
+			}
+			var desH = function(){ // Funcion regresar el último movimiento
+				var uM = mov[mov.length-1].split("-"); //Ultimo Movimiento
+//console.log(uM)
+				fgId(uM[1]).appendChild(fgId(uM[0]))
+				if (uM[3]!="") 
+					fgId(uM[2]).appendChild(fgId(uM[3]));
+				turno = uM[0][0];
+				//elimina el ultimo turno
+				mov.pop();
+			}
+			var opMove = function(pieza){ // Opciones de movimiento
+
+				var arreglo; // Contennedor de arreglo de las funciones
+				switch(pieza[1]){
+					case 'p': arreglo = mp(pieza); break;
+					case 't': arreglo = mt(pieza); break;
+					case 'a': arreglo = ma(pieza); break;
+					case 'c': arreglo = mc(pieza); break;
+					case 'r': arreglo = mt(pieza); arreglo = arreglo.concat(ma(pieza)); break;
+					case 'k': arreglo = mk(pieza); arreglo = arreglo.concat(mke(pieza)); break;
+					default: break;
+				}
+				return arreglo;
+			}
+			var ct = function(idt){ // Comprueba el turno
+				return idt[0] ==turno ? true : false;
+			}
+			var movePz = function(idmp){ //parametro: id del movimiento posible
+				var cd = fgId(idmp); //contenedor destino
+				var idc = pzCasilla(cd.id)==2 ? cd.childNodes[0].id : ''; // id del nodo hijo
+//console.log("Pieza");
+//console.log(idmp);
+//console.log(pzCasilla(cd.id));	
+
+
+				for (i = 0; i < x.length; i++) {
+					if (x[i].classList.contains("active")){
+						var aux = x[i].innerHTML;
+						//si aux tiene algo 
+						if (cd.innerHTML!='')
+							if(cd.childNodes[0].id[0]=='b')
+								fgId("c-negras").appendChild(cd.childNodes[0])
+							else if (cd.childNodes[0].id[0]=='n')
+								fgId("c-blancas").appendChild(cd.childNodes[0])
+
+						//El contenido de aux se coloca en el lugar de destino
+						cd.innerHTML = aux;
+						x[i].innerHTML = '';
+						// añade el movimiento a la lista de movimientos / Pieza- Origen - Destino
+						mov.push(cd.childNodes[0].id+"-"+x[i].id+"-"+cd.id+"-"+idc)
+					};
+				}
+				//Convertir peon
+				if ( (cd.childNodes[0].id).substr(0,2) == 'bp' && cd.id[1] == 8 ){
+					alert("cambiar ficha");
+				}
+			}
+
+			for (i = 0; i < x.length; i++) {
+			    x[i].addEventListener("click",function(){
+			    	//Marca pieza activad y bloquea la selección de otra
+			    	if(this.innerHTML!='' && activo == false && ct(this.childNodes[0].id)){
+			    		desactiva();
+			    		this.classList.add("active");
+			    		//console.log(this.childNodes[0].id)
+			    		var posibles = opMove(this.childNodes[0].id) // Busca los posibles movimientos
+			    		var jaq = jaqDes(posibles,this.childNodes[0].id) // busca los posibles jaques en esa pieza 
+			    		addArrPos(posibles,jaq); //Indica los movimientos pero omite los que representen un jaque
+			    		activo = true;
+			    	}
+			    	//Si hago click de nuevo sobre una pieza seleccionada,
+			    	//quita la selección
+			    	else if(activo == true && this.classList.contains("active")){
+			    		desactiva();
+			    		activo = false;			    		
+			    	}
+			    	//Si es un movimiento posible desplaza la pieza
+			    	else if(activo == true && this.classList.contains("posible")){
+			    		movePz(this.id);
+			    		turno = (turno == 'b') ? 'n':'b'; 
+			    		desactiva();
+			    		comEn(); //Compruebael enroque, si ocurre mueve la torre
+			    		desactiva();
+			    		if(jM())
+			    			alert("Jaque mate");
+
+			    		activo = false;
+			    		
+			    	}
+				});
+			}
+			
+			
+		</script>
+	</body>
+</html>
