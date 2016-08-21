@@ -57,7 +57,7 @@
 			var pc = 0; //contador de caballo
 			var pr = 0; //contador de reina
 			var pk = 0; //contador de reyes
-			var fig='ljkmnkjliiiiiiii'+fb+fb+fb+fb+'IIIIIIIILJKMNKJL';
+			var fig='lkjmnjkliiiiiiii'+fb+fb+fb+fb+'IIIIIIIILKJMNJKL';
 			var mov=[] // lista de movimientos 
 			var pzs=[] //Arreglo de piezas
 
@@ -72,14 +72,14 @@
 						case "l": pt++;	idp = "bt"+pt; break;
 						case "j": pa++; idp = "ba"+pa; break;
 						case "k": pc++; idp = "bc"+pc; break;
-						case "n": pr++; idp = "br"+pr; break;
-						case "m": pk++; idp = "bk"+pk; break;
+						case "n": pk++; idp = "bk"+pk; break;
+						case "m": pr++; idp = "br"+pr; break;
 						case "i": pp++; idp = "bp"+pp; break;
 						case "L": pt++; idp = "nt"+pt; break;
 						case "J": pa++; idp = "na"+pa; break;
 						case "K": pc++; idp = "nc"+pc; break;
-						case "N": pr++; idp = "nr"+pr; break;
-						case "M": pk++; idp = "nk"+pk; break;
+						case "N": pk++; idp = "nk"+pk; break;
+						case "M": pr++; idp = "nr"+pr; break;
 						case "I": pp++; idp = "np"+pp; break;
 					}
 
@@ -132,10 +132,20 @@
 				return false;
 			}
 
-			var addArrPos = function(arr,jaques){ 
+			var quitaPos = function(arr,jaques){//Quita los posibles movimientos que comprometen al rey
+				var movCas = []; //array de movimientos
 				for (i = 0; i < arr.length; i++) {
 					//Si al mover la pieza no se encuentra el rey en jaque permite el movimiento
-					if( jaques['c'].indexOf(arr[i])<0 ) fgId(arr[i]).classList.add("posible");
+					if( jaques['c'].indexOf(arr[i])<0 ) movCas.push(arr[i]);
+				}
+				return movCas;
+			}
+
+			var addArrPos = function(arr){ 
+
+				for (i = 0; i < arr.length; i++) {
+					//Si al mover la pieza no se encuentra el rey en jaque permite el movimiento
+					fgId(arr[i]).classList.add("posible");
 				}
 			}
 			
@@ -415,23 +425,25 @@
 				var rey; // Id del rey
 				var cR; // Casilla del Rey
 				var arrE ={} // arreglo de movimientos encontrados
+				var mL = 0; //Numero de movimientos libres
 				arrE['p'] = [];
 				arrE['c'] = [];
+
 				//Buscar al rey
+console.log("haques")
 				for(var i = 0; i<pzs.length;i++){
 					if(pzs[i][0]==turno){
 						fgId(pzs[i]).parentElement.classList.add("active");
 						var posibles = opMove(pzs[i]) // Busca los posibles movimientos
-						var jaq = jaqDes(posibles,pzs[i]) // busca los posibles jaues en esa pieza 
+						var jaq = jaqDes(posibles,pzs[i]) // busca los posibles jaues en esa pieza
+						var movReales = quitaPos(posibles,jaq);
+						if(movReales.length>0) mL++; //Si existen posibles no es jaquemate
 						desactiva();
-//if ( pzs[i] == 'bk2'){ console.log(posibles);console.log(pzs[i]);}
-//console.log(pzs[i])
-//console.log(jaq)
-			    		//addArrPos(posibles,jaq); //Indica los movimientos pero omite los que representen un jaque
+console.log(movReales.length);					
 					}
 				}
-//if ( pieza == 'ba3'){ console.log(fgId(array[i]).innerHTML);}
-
+				if (mL>0) return false;
+				else return true
 			}			
 			var jaqDes = function(array,pieza){ //Buscar Jaque a la descubierta de las posibilidades de movimiento(array) de una pieza
 				var op = fgId(pieza);//Objeto de la pieza
@@ -558,7 +570,8 @@
 			    		//console.log(this.childNodes[0].id)
 			    		var posibles = opMove(this.childNodes[0].id) // Busca los posibles movimientos
 			    		var jaq = jaqDes(posibles,this.childNodes[0].id) // busca los posibles jaques en esa pieza 
-			    		addArrPos(posibles,jaq); //Indica los movimientos pero omite los que representen un jaque
+			    		var movReales = quitaPos(posibles,jaq); //Indica los movimientos pero omite los que representen un jaque
+			    		addArrPos(movReales);
 			    		activo = true;
 			    	}
 			    	//Si hago click de nuevo sobre una pieza seleccionada,
