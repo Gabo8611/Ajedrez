@@ -7,15 +7,19 @@
 			    font-family: alpha;
 			    src: url(ChessAlpha2.ttf);
 			}
-			#c-blancas,#c-negras,.casilla{
-				font-family: alpha;				
+
+			#c-blancas,#c-negras, #tablero, #controles{
+				width:calc(2.2rem*8);
+			}
+			#c-blancas,#c-negras,.casilla, #turnoActual{
+				font-family: alpha;	
+				font-size: 1.4rem;			
 			}
 			.casilla{
-				width:20px;
-				height:20px;
-				padding:5px;
+				width:1.4rem;
+				height:1.4rem;
+				padding:0.4rem;
 				display: inline-block;
-				font-size: 20px;
 				vertical-align: middle;
 				text-align: center;
 				cursor:pointer;
@@ -42,11 +46,35 @@
 				z-index: 100;
 				position:relative;
 			}
+			.t-negras{
+				transform: rotate(180deg);
+			}
+			.t-negras > div > .casilla, .t-negras > #c-negras, .t-negras > #c-blancas{
+				transform: rotate(180deg);
+			}
+			#contTurno{
+				display: inline;
+			}
 			
 		</style>
 
 	</head>
 	<body>
+		<div id="controles">
+			<select id="turnoSelect">
+				<option value="b">
+					Blancas
+				</option>
+				<option value="n">
+					Negras
+				</option>
+			</select>
+			<div id="contTurno">
+				Turno: <span id="turnoActual"><i>i</i></span>
+			</div>
+		<div>
+		
+
 		<script>
 			var t='';
 			var l='abcdefgh';
@@ -61,8 +89,9 @@
 			var mov=[] // lista de movimientos 
 			var pzs=[] //Arreglo de piezas
 
-			t+=" <div id='c-blancas'>&nbsp;" //Contenedor para las piezas capturadas blancas
-			t+=" </div>"
+			t+=" <div id='tablero'>"
+			t+=" 	<div id='c-negras'>&nbsp;" //Contenedor para las piezas capturadas blancas
+			t+=" 	</div>"
 			for (var i=8; i>0; i--){
 				var idp = ''; //id de la pieza 
 				t+="<div>"
@@ -90,7 +119,8 @@
 				}
 				t+="</div>"
 			}
-			t+=" <div id='c-negras'>&nbsp;" //Contenedor para las piezas capturadas negras
+			t+=" 	<div id='c-blancas'>&nbsp;" //Contenedor para las piezas capturadas negras
+			t+=" 	</div>"
 			t+=" </div>"
 			document.write(t);
 			
@@ -372,7 +402,7 @@
 					t[1] = fgId("h"+f)
 					//Estos bucles compueban que no haya pieza en medio
 					//Torre izquierda
-					for(var i = 2; i>0;i--){
+					for(var i = 3; i>0;i--){
 						if( pzCasilla( l[i]+f )>1 ){
 							libre = false;
 						}
@@ -385,7 +415,7 @@
 					}
 					libre = true
 					//Torre derecha	
-					for(var i = 4; i<8;i++){
+					for(var i = 5; i<7;i++){
 						if( pzCasilla( l[i]+f )>1 ){
 							libre = false
 						}
@@ -400,26 +430,229 @@
 //console.log(movCas);
 				return movCas;
 			}
+			var prom = function(pieza){
+				var p = prompt("Convertir pieza: \n' a ' = Alfil \n' c ' = Caballo \n' t ' = Torre\n' r ' = Reina \n' k ' = Rey");
+				var pzaC; //Pieza de cambio
+				var ipzaC = pzs.indexOf(pieza) //Indice de pieza cambiada en la variable pzs
+				switch( p.toLowerCase() ){
+					case 'a':
+						pzaC = turno == 'b' ? 'j' : 'J'
+						pa++;
+						fgId(pieza).innerHTML = pzaC;
+						fgId(pieza).id = pzs[ipzaC] = pieza[0]+p+pa;	
+						mov[mov.length-1] += "mC"+pieza[0]+p+pa; //Añadir Registro de cambio de pieza al arreglo de movimientos				
+						break;
+					case 'c':
+						pzaC = turno == 'b' ? 'k' : 'K'
+						pc++;
+						fgId(pieza).innerHTML = pzaC;
+						fgId(pieza).id = pzs[ipzaC] = pieza[0]+p+pc;	
+						mov[mov.length-1] += "mC"+pieza[0]+p+pc; //Añadir Registro de cambio de pieza al arreglo de movimientos					
+						break;
+					case 't':
+						pzaC = turno == 'b' ? 'l' : 'L'
+						pt++;
+						fgId(pieza).innerHTML = pzaC;
+						fgId(pieza).id = pzs[ipzaC] = pieza[0]+p+pt;	
+						mov[mov.length-1] += "mC"+pieza[0]+p+pt; //Añadir Registro de cambio de pieza al arreglo de movimientos					
+						break;
+					case 'r':
+						pzaC = turno == 'b' ? 'm' : 'M'
+						pr++;
+						fgId(pieza).innerHTML = pzaC;
+						fgId(pieza).id = pzs[ipzaC] = pieza[0]+p+pr;	
+						mov[mov.length-1] += "mC"+pieza[0]+p+pr; //Añadir Registro de cambio de pieza al arreglo de movimientos					
+						break;
+					case 'k':
+						pzaC = turno == 'b' ? 'n' : 'N'
+						pk++;
+						fgId(pieza).innerHTML = pzaC;
+						fgId(pieza).id = pzs[ipzaC] = pieza[0]+p+pk;	
+						mov[mov.length-1] += "mC"+pieza[0]+p+pk; //Añadir Registro de cambio de pieza al arreglo de movimientos					
+						break;
+					default:
+						prom();
+						break;
+				}
+
+			}
+			var desProm = function(org,camb){ // Deshacer promocion Original | Cambiada
+				var pzaC = camb[0] == 'b' ? 'i' : 'I'
+				var ipzaC = pzs.indexOf(camb)
+				switch( camb[1] ){
+					case 'a':
+						pa--;
+						fgId(camb).innerHTML = pzaC;
+						fgId(camb).id = pzs[ipzaC] = org;						
+						break;
+					case 'c':
+						pc--;
+						fgId(camb).innerHTML = pzaC;
+						fgId(camb).id = pzs[ipzaC] = org;						
+						break;
+					case 't':
+						pt--;
+						fgId(camb).innerHTML = pzaC;
+						fgId(camb).id = pzs[ipzaC] = org;						
+						break;
+					case 'r':
+						pr--;
+						fgId(camb).innerHTML = pzaC;
+						fgId(camb).id = pzs[ipzaC] = org;						
+						break;
+					case 'k':
+						pk--;
+						fgId(camb).innerHTML = pzaC;
+						fgId(camb).id = pzs[ipzaC] = org;						
+						break;
+					default:
+						break;
+				}
+			}
 			var comEn = function(pieza){ // Comprueba si se hizo enroque
 				var ultMov = mov[mov.length-1];
 				var aux = ultMov.split("-");
 				var t;
-				if (aux[0][1] == "k" && aux[1][1] == aux[2][1] && aux[1][0] == 'd' ){
+				if (aux[0][1] == "k" && aux[1][1] == aux[2][1] && aux[1][0] == 'e' ){
 					switch(aux[2][0]){
 						case 'b': 
 							fgId("a"+aux[2][1]).classList.add("active");
-							movePz("c"+aux[2][1]);
+							movePz("c"+aux[2][1],true);
+							mov[mov.length-1] += "rq" // indica en el arreglo de movimientos que hubo un enroque
 							break;
 						case 'g': 
 							fgId("h"+aux[2][1]).classList.add("active");
-							movePz("f"+aux[2][1]);
-
+							movePz("f"+aux[2][1],true);
+							mov[mov.length-1] += "rq"; // indica en el arreglo de movimientos que hubo un enroque
+							break;
 						default:
 							return false
 					}
+
 				}else{
 					return false;
 				}
+			}
+			var ahogado = function(){ //Empate porque el rey ya no puede realizar movimientos legales
+				var rey; // Id del rey
+				var cR; // Casilla del Rey
+				var idAct=''; // id en el bucle
+				var idPzs={	bk:0,nk:0};
+				var arrE ={} // arreglo de movimientos encontrados
+				arrE['p'] = [];
+				arrE['c'] = [];
+
+				//Busca al rey o reyes
+				for(var i=0;i<pzs.length;i++){
+					idAct = pzs[i];
+					if(idAct[1]=='k' && idAct[0]==turno){
+						rey = fgId(idAct);
+						cR = fgId(idAct).parentElement;
+						idPzs[idAct]++;	
+					}				
+				}
+				i--;
+//Comprueba cada una de las piezas
+				//for(var i=0;i<pzs.length;i++){
+					//Si no hay más de un rey en el turno actual ejecuta la comprobación
+					if( !(idPzs[turno+"k"]>1) ){
+						cT();
+				
+						//Busca cada una de las piezas contrarias
+						for(var j = 0; j<pzs.length;j++){
+
+							if(pzs[j][0]==turno){ // Compara el primer caracter para conocer si es blanca o negra
+								// Comprueba todos los movimientos de la pieza contraria
+								switch(pzs[j][1]){
+									case 'p': mC = mp(pzs[j]); break;
+									case 't': mC = mt(pzs[j]); break;
+									case 'a': mC = ma(pzs[j]); break;
+									case 'c': mC = mc(pzs[j]); break;
+									case 'r': mC = mt(pzs[j]); mC = mC.concat(ma(pzs[j]));	break;
+									default: mC = []; break;
+								}
+								if (mC.indexOf(cR.id)>-1){
+									arrE['p'].push(pzs[j]); //arreglo de piezas
+									arrE['c'].push(fgId(pzs[j]).parentElement.id); //Arreglo de casillas
+										//mC.push(pzs[i]) //Añade al arreglo las piezas que amenazan al rey
+								}
+
+							}
+						}
+
+						cT();
+
+					}
+				//}
+
+				//Si ya no le quedan movimientos (jM()) pero nadie amenaza al rey (arrE['p'].length==0) se considera ahogado
+				if (jM() && arrE['p'].length==0){
+					return true
+				}else{
+					return false;
+				}
+			}
+			var sPiezas = function(){//Empate porque no quedar suficientes piezas para jugar
+				var idAct=''; // id en el bucle
+				var idPzs={	bt:0, ba:0, bc:0, bk:0, br:0, bp:0, nt:0, na:0, nc:0, nk:0, nr:0, np:0};
+				for(var i=0;i<x.length;i++){
+					if (x[i].innerHTML!=''){
+						idAct = (x[i].childNodes[0].id).substr(0,2);
+						idPzs[idAct]++;
+					}
+				}
+				if( idPzs['bt']==0 && idPzs['br']==0 && idPzs['bp']==0 && 
+				    idPzs['nt']==0 && idPzs['nr']==0 && idPzs['np']==0){ // Si no quedan reina peon o torre
+					if( idPzs['bc'] == 0 && idPzs['ba'] == 0 && idPzs['nc'] == 0 && idPzs['na'] == 0 && 
+						idPzs['bk'] == 1 && idPzs['nk'] == 1){ // si solo queda rey
+						return true
+					}else if(idPzs['ba'] == 0 && idPzs['na'] == 0 && //Si no hay alfiles
+						(idPzs['bc'] == 1 || idPzs['nc'] == 1) &&  idPzs['bk'] == 1 && idPzs['nk'] == 1){ // Pero quedan solo un caballo en uno o ambos bandos
+						return true
+					}else if(   ((idPzs['ba'] == 1 || idPzs['na'] == 1) && //al menos un alfil y 
+								 (idPzs['bc'] == 0 && idPzs['nc'] == 0) && //ningun caballo
+								  idPzs['bk'] == 1 && idPzs['nk'] == 1) || 
+
+								((idPzs['ba'] == 1 || idPzs['nc'] == 1) && //un alfil blanco y un caballo negro
+								 (idPzs['bc'] == 0 || idPzs['na'] == 0) && // sin caballo blanco y sin alfil negro
+								  idPzs['bk'] == 1 && idPzs['nk'] == 1) || // 
+
+								((idPzs['bc'] == 1 || idPzs['na'] == 1) && //un caballo blanco y un alfil negro
+								 (idPzs['ba'] == 0 || idPzs['nc'] == 0) && // sin alfil blanco y sin caballo negro
+								  idPzs['bk'] == 1 && idPzs['nk'] == 1) 
+							){
+						return true;
+					}else{
+						return false;
+					}
+				}
+			}
+			var repeticion = function(){//Empate porque ambos jugadores repitieron la misma jugada 3 veces
+				var i = mov.length;
+
+				if (i>=12 && 
+					mov[+i-1] == mov[+i-5] && mov[+i-1] == mov[+i-9] &&
+					mov[+i-2] == mov[+i-6] && mov[+i-2] == mov[+i-10] &&
+					mov[+i-3] == mov[+i-7] && mov[+i-3] == mov[+i-11] &&
+					mov[+i-4] == mov[+i-8] && mov[+i-4] == mov[+i-12]){
+					return true
+				}else{
+					return false;
+				}
+			}
+			var tablas = function(){
+				if(ahogado() ){
+					alert("Empate, no es posible realizar más movimientos legales");
+					return true;
+				}else if(sPiezas()){
+					alert("Empate, no quedar suficientes piezas para jugar");
+					return true;
+				}else if(repeticion()){
+					alert("Empate, ambos jugadores repitieron la misma jugada varias veces");
+					return true;
+				}else
+					return false;
+
 			}
 			var jM = function(){ //funcion para identificar el jaque mate
 				var rey; // Id del rey
@@ -430,16 +663,17 @@
 				arrE['c'] = [];
 
 				//Buscar al rey
-console.log("haques")
+//console.log("haques")
 				for(var i = 0; i<pzs.length;i++){
 					if(pzs[i][0]==turno){
-						fgId(pzs[i]).parentElement.classList.add("active");
+						if (fgId(pzs[i]).parentElement.id[1]!="-")
+							fgId(pzs[i]).parentElement.classList.add("active");
 						var posibles = opMove(pzs[i]) // Busca los posibles movimientos
 						var jaq = jaqDes(posibles,pzs[i]) // busca los posibles jaues en esa pieza
 						var movReales = quitaPos(posibles,jaq);
 						if(movReales.length>0) mL++; //Si existen posibles no es jaquemate
 						desactiva();
-console.log(movReales.length);					
+//console.log(movReales.length);					
 					}
 				}
 				if (mL>0) return false;
@@ -468,8 +702,8 @@ console.log(movReales.length);
 
 						//Simula el movimiento de la pieza
 
-						movePz(array[i]);
-						turno = (turno == 'b') ? 'n':'b';
+						movePz(array[i],true);
+						cT();
 				
 						//Busca cada una de las piezas contrarias
 						for(var j = 0; j<pzs.length;j++){
@@ -506,12 +740,25 @@ console.log(movReales.length);
 			var desH = function(){ // Funcion regresar el último movimiento
 				var uM = mov[mov.length-1].split("-"); //Ultimo Movimiento
 //console.log(uM)
+				
+				//Deshacer el cambio de pieza
+				if( uM[3].substr(0,2)=='mC' )
+					desProm(uM[0],uM[3].substr(2,uM[3].length));
+
 				fgId(uM[1]).appendChild(fgId(uM[0]))
-				if (uM[3]!="") 
+				if (uM[3]!='rq' && uM[3].substr(0,2)!='mC' && uM[3]!=""  ) 
 					fgId(uM[2]).appendChild(fgId(uM[3]));
 				turno = uM[0][0];
+				fgId('turnoActual').childNodes[0].innerHTML = (turno == 'b') ? 'i':'I'; 
+
 				//elimina el ultimo turno
 				mov.pop();
+
+				if(uM[3]=='rq')
+					desH();
+
+				desactiva();
+
 			}
 			var opMove = function(pieza){ // Opciones de movimiento
 
@@ -530,13 +777,14 @@ console.log(movReales.length);
 			var ct = function(idt){ // Comprueba el turno
 				return idt[0] ==turno ? true : false;
 			}
-			var movePz = function(idmp){ //parametro: id del movimiento posible
+			var cT = function(){ //Cambiar de turno
+				turno = (turno == 'b') ? 'n':'b'; 
+				fgId('turnoActual').childNodes[0].innerHTML = (turno == 'b') ? 'I':'i'; 				
+			}
+			var movePz = function(idmp,simula){ //parametro: id del movimiento posible
+				simula = simula || false;
 				var cd = fgId(idmp); //contenedor destino
 				var idc = pzCasilla(cd.id)==2 ? cd.childNodes[0].id : ''; // id del nodo hijo
-//console.log("Pieza");
-//console.log(idmp);
-//console.log(pzCasilla(cd.id));	
-
 
 				for (i = 0; i < x.length; i++) {
 					if (x[i].classList.contains("active")){
@@ -556,11 +804,65 @@ console.log(movReales.length);
 					};
 				}
 				//Convertir peon
-				if ( (cd.childNodes[0].id).substr(0,2) == 'bp' && cd.id[1] == 8 ){
-					alert("cambiar ficha");
+				if ( (((cd.childNodes[0].id).substr(0,2) == 'bp' && cd.id[1] == 8) || 
+					  ((cd.childNodes[0].id).substr(0,2) == 'np' && cd.id[1] == 1)) && !simula){
+					prom(cd.childNodes[0].id);				
 				}
 			}
+			/*var ia = function(){
+				var rey; // Id del rey
+				var cR; // Casilla del Rey
+				var idAct=''; // id en el bucle
+				var idPzs={	bk:0,nk:0};
+				var arrE ={} // arreglo de movimientos encontrados
+				arrE['p'] = [];
+				arrE['c'] = [];
 
+				//Busca al rey o reyes
+				for(var i=0;i<pzs.length;i++){
+					idAct = pzs[i];
+					if(idAct[1]=='k' && idAct[0]==turno){
+						rey = fgId(idAct);
+						cR = fgId(idAct).parentElement;
+						idPzs[idAct]++;	
+					}				
+				}
+				i--;
+//Comprueba cada una de las piezas
+				//for(var i=0;i<pzs.length;i++){
+					//Si no hay más de un rey en el turno actual ejecuta la comprobación
+					if( !(idPzs[turno+"k"]>1) ){
+						cT();
+				
+						//Busca cada una de las piezas contrarias
+						for(var j = 0; j<pzs.length;j++){
+
+							if(pzs[j][0]==turno){ // Compara el primer caracter para conocer si es blanca o negra
+								// Comprueba todos los movimientos de la pieza contraria
+								switch(pzs[j][1]){
+									case 'p': mC = mp(pzs[j]); break;
+									case 't': mC = mt(pzs[j]); break;
+									case 'a': mC = ma(pzs[j]); break;
+									case 'c': mC = mc(pzs[j]); break;
+									case 'r': mC = mt(pzs[j]); mC = mC.concat(ma(pzs[j]));	break;
+									default: mC = []; break;
+								}
+								if (mC.indexOf(cR.id)>-1){
+									arrE['p'].push(pzs[j]); //arreglo de piezas
+									arrE['c'].push(fgId(pzs[j]).parentElement.id); //Arreglo de casillas
+										//mC.push(pzs[i]) //Añade al arreglo las piezas que amenazan al rey
+								}
+
+							}
+						}
+
+						cT();
+
+					}
+				//}
+
+				//alert("ia")
+			}*/
 			for (i = 0; i < x.length; i++) {
 			    x[i].addEventListener("click",function(){
 			    	//Marca pieza activad y bloquea la selección de otra
@@ -583,19 +885,31 @@ console.log(movReales.length);
 			    	//Si es un movimiento posible desplaza la pieza
 			    	else if(activo == true && this.classList.contains("posible")){
 			    		movePz(this.id);
-			    		turno = (turno == 'b') ? 'n':'b'; 
+			    		cT(); 
 			    		desactiva();
 			    		comEn(); //Compruebael enroque, si ocurre mueve la torre
 			    		desactiva();
-			    		if(jM())
-			    			alert("Jaque mate");
+			    		if(tablas()){
+			    		}else if(jM()){
+			    			alert("Jaque mate!! Ganan las "+ turno == 'b' ? "Negras" : "Blancas");
+			    		}
 
 			    		activo = false;
 			    		
 			    	}
+			    	/*if(turno=='n'){
+			    		ia();
+			    	}*/
 				});
 			}
 			
+			fgId("turnoSelect").addEventListener("change",function(){
+				if(this.value=='n'){
+					fgId("tablero").classList.add("t-negras")
+				}else{
+					fgId("tablero").classList.remove("t-negras")
+				}
+			})
 			
 		</script>
 	</body>
